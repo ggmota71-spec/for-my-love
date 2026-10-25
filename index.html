@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Для Любимой 🖤</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Special+Elite&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        special: ['"Special Elite"', 'cursive'],
+                    },
+                    colors: {
+                        darkBg: '#08080a',
+                        cardBg: '#121218',
+                        neonPurple: '#a855f7',
+                        neonPink: '#ec4899',
+                        neonCyan: '#06b6d4',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #08080a;
+            color: #f3f4f6;
+            overflow-x: hidden;
+            touch-action: manipulation;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .glow-box {
+            box-shadow: 0 0 30px rgba(168, 85, 247, 0.2);
+            border: 1px solid rgba(168, 85, 247, 0.35);
+        }
+        .glow-text {
+            text-shadow: 0 0 12px rgba(168, 85, 247, 0.8), 0 0 24px rgba(236, 72, 153, 0.6);
+        }
+        .glow-btn:active {
+            transform: scale(0.96);
+        }
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+        .animate-pulse-glow {
+            animation: pulseGlow 2.5s infinite ease-in-out;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+        @keyframes orbitFloat1 {
+            0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+            33% { transform: translate(30px, -40px) rotate(10deg) scale(1.05); }
+            66% { transform: translate(-20px, 30px) rotate(-5deg) scale(0.95); }
+            100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+        }
+        @keyframes orbitFloat2 {
+            0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+            33% { transform: translate(-35px, 25px) rotate(-12deg) scale(0.95); }
+            66% { transform: translate(25px, -35px) rotate(8deg) scale(1.05); }
+            100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+        }
+        .flying-photo-1 { animation: orbitFloat1 7s infinite ease-in-out; }
+        .flying-photo-2 { animation: orbitFloat2 9s infinite ease-in-out; }
+
+    /* Эффект нажатия/тапа звездочкой */
+    .tap-particle {
+        position: fixed;
+        pointer-events: none;
+        font-size: 16px;
+        animation: popAndFade 0.8s forwards ease-out;
+        z-index: 9999;
+    }
+    @keyframes popAndFade {
+        0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+        50% { transform: translate(-50%, -80%) scale(1.3); }
+        100% { opacity: 0; transform: translate(-50%, -120%) scale(1); }
+    }
+</style>
+</head>
+<body class="min-h-screen flex flex-col justify-center items-center p-4 relative" onclick="createTapParticle(event)">
+
+<!-- Летающие фоновые свечения -->
+<div class="fixed top-[-10%] left-[-10%] w-72 h-72 bg-purple-900/30 rounded-full blur-3xl pointer-events-none"></div>
+<div class="fixed bottom-[-10%] right-[-10%] w-72 h-72 bg-pink-900/30 rounded-full blur-3xl pointer-events-none"></div>
+
+<!-- Основной контейнер карточки -->
+<div id="app" class="w-full max-w-md bg-cardBg/90 backdrop-blur-xl rounded-3xl p-6 glow-box relative z-10 transition-all duration-300 my-auto">
+    
+    <!-- Шапка (для теста) -->
+    <div id="header-container" class="flex justify-between items-center mb-6 border-b border-purple-500/20 pb-3">
+        <span class="text-xs uppercase tracking-widest text-purple-400 font-semibold">Мини проверка · 16 лет</span>
+        <span id="progress-badge" class="text-xs px-2.5 py-1 rounded-full bg-purple-950 text-purple-300 border border-purple-800/50">1 / 10</span>
+    </div>
+
+    <!-- Контейнер с контентом -->
+    <div id="content-container"></div>
+
+</div>
+
+<!-- Модалка ругани при ошибке -->
+<div id="error-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-6 z-50 hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-cardBg border border-pink-500/50 rounded-2xl p-6 text-center max-w-xs shadow-2xl shadow-pink-900/40">
+        <div class="text-4xl mb-3 animate-bounce">😈</div>
+        <h3 class="text-lg font-bold text-pink-400 mb-2">Милана, ну ты чего!</h3>
+        <p id="error-message-text" class="text-sm text-gray-300 mb-6 leading-relaxed">
+            Читай внимательнее! Опять неправильно 😈 Начинаем тест заново, любимая!
+        </p>
+        <button onclick="closeErrorModal()" class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl font-semibold text-white glow-btn shadow-lg">
+            Попробовать снова
+        </button>
+    </div>
+</div>
+
+<!-- Спец-оверлей 10 вопроса ("Тебя") -->
+<div id="tebya-overlay" class="fixed inset-0 bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6 z-50 hidden opacity-0 transition-opacity duration-700">
+    <h1 class="text-6xl md:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 glow-text text-center font-special tracking-wider animate-pulse-glow">
+        Тебя
+    </h1>
+    <p class="text-gray-400 text-sm mt-4 text-center tracking-wider font-sans">Единственное и самое главное правильное решение ❤️</p>
+</div>
+
+<!-- Модальное окно для секретного письма -->
+<div id="secret-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-6 z-50 hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-cardBg border border-purple-500/50 rounded-2xl p-6 text-center max-w-sm w-full shadow-2xl">
+        <div class="text-4xl mb-3">🔐</div>
+        <h3 class="text-lg font-bold text-purple-300 mb-2">Секретный замок</h3>
+        <p class="text-xs text-gray-400 mb-4">Введи секретный код (подсказка: твои года или дата дн):</p>
+        <input type="password" id="secret-code-input" placeholder="Код..." class="w-full p-3 rounded-xl bg-darkBg border border-purple-500/40 text-center text-purple-300 font-bold mb-4 focus:outline-none focus:border-pink-500">
+        <div class="flex gap-2">
+            <button onclick="closeSecretModal()" class="w-1/2 py-2.5 bg-gray-800 rounded-xl text-xs text-gray-300">Закрыть</button>
+            <button onclick="checkSecretCode()" class="w-1/2 py-2.5 bg-purple-600 rounded-xl text-xs text-white font-bold">Открыть</button>
+        </div>
+        <div id="secret-letter-content" class="hidden mt-4 p-4 bg-darkBg/90 border border-pink-500/40 rounded-xl text-left text-xs text-gray-200 leading-relaxed max-h-60 overflow-y-auto">
+            <p class="font-bold text-pink-400 mb-2">Моя Любимая! 💌</p>
+            <p>Если ты читаешь это — значит, ты взломала мой секретный замок! На самом деле тут нет никаких секретов, а есть лишь одно главное признание: ты делаешь каждый мой день лучше. Мой фиолетовый цвет, моя гитара Ibanez и все сигареты в мире не имеют смысла без тебя. Спасибо, что ты есть. С 16-летием! 🔥🖤</p>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для полноэкранного просмотра фотографий -->
+<div id="photo-modal" class="fixed inset-0 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-300" onclick="closePhotoModal()">
+    <img id="photo-modal-img" src="" class="max-w-full max-h-[85vh] rounded-2xl border border-purple-500/40 shadow-2xl object-contain">
+</div>
+
+<script>
+    const questions = [
+        {
+            title: "Какой мой любимый цвет?",
+            options: ["Белый", "Зелёный", "Фиолетовый", "Синий"],
+            correct: 2
+        },
+        {
+            title: "Когда у меня день рождения?",
+            options: ["12 июля", "12 августа", "12 февраля", "12 апреля"],
+            correct: 1
+        },
+        {
+            title: "Моя любимая жижа?",
+            options: ["Catswill", "Самоубийца", "Подонки", "Злая монашка"],
+            correct: 3
+        },
+        {
+            title: "Мой любимый цветок?",
+            options: ["Ликорис", "Роза", "Лилия", "Гвоздика"],
+            correct: 0
+        },
+        {
+            title: "Мои любимые сигареты?",
+            options: ["Данхилл", "Чапман", "NZ", "Минск"],
+            correct: 1
+        },
+        {
+            title: "Моя любимая песня?",
+            options: [
+                "Серёга пират - картины", 
+                "zxcursed - blades", 
+                "Распять", 
+                "Токсис, Дора - Знак", 
+                "8 миля", 
+                "Legacy", 
+                "Житность - хиточек", 
+                "Секс по-питерски"
+            ],
+            correct: 0
+        },
+        {
+            title: "Бренд моей гитары?",
+            options: ["Gibson", "Ibanez", "Rocket", "Cort"],
+            correct: 1
+        },
+        {
+            title: "Мой любимый фильм/фильмы?",
+            options: [
+                "Бегущий в лабиринте", 
+                "Пираты карибского моря", 
+                "Интерстеллар", 
+                "1+1", 
+                "Война будущего", 
+                "Зелёная книга"
+            ],
+            correct: 1
+        },
+        {
+            title: "Любимая пара года?",
+            options: ["Зима", "Лето", "Осень", "Весна"],
+            correct: 0
+        },
+        {
+            title: "Что я больше всего люблю в своей жизни?",
+            options: ["Курить", "Кушать", "Спать", "Играть на гитаре", "Играть в комп"],
+            correct: -1
+        }
+    ];
+
+    const compliments = [
+        "Твоя улыбка разгоняет любую тьму ☀️",
+        "С тобой даже просто молчать — кайф 🎧",
+        "У тебя самый невероятный взгляд 👁️✨",
+        "Ты умеешь поднять настроение за секунду 💜",
+        "Ты самая стильная и красивая 🖤",
+        "Твой смех — мой любимый звук 🎶",
+        "С тобой уютно в любую погоду ❄️",
+        "Ты идеальное совпадение для меня ❤️"
+    ];
+
+    let currentQIndex = 0;
+
+    function createTapParticle(e) {
+        const symbols = ['✨', '💜', '🖤', '⚡'];
+        const particle = document.createElement('div');
+        particle.className = 'tap-particle';
+        particle.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+        particle.style.left = e.clientX + 'px';
+        particle.style.top = e.clientY + 'px';
+        document.body.appendChild(particle);
+        setTimeout(() => particle.remove(), 800);
+    }
+
+    function renderQuestion() {
+        const container = document.getElementById('content-container');
+        const headerContainer = document.getElementById('header-container');
+        headerContainer.style.display = 'flex';
+        
+        document.getElementById('progress-badge').innerText = `${currentQIndex + 1} / 10`;
+
+        const q = questions[currentQIndex];
+        
+        let html = `
+            <h2 class="text-lg font-bold mb-5 text-gray-100 leading-snug">${q.title}</h2>
+            <div class="space-y-3" id="options-group">
+        `;
+
+        q.options.forEach((opt, idx) => {
+            html += `
+                <button id="opt-btn-${idx}" onclick="handleAnswer(${idx})" class="opt-btn w-full text-left p-3.5 rounded-xl bg-darkBg/80 border border-purple-500/20 hover:border-purple-500/60 hover:bg-purple-950/30 transition-all text-sm font-medium text-gray-200 glow-btn flex items-center justify-between group">
+                    <span>${opt}</span>
+                    <span class="w-2 h-2 rounded-full bg-purple-500/30 group-hover:bg-purple-400 transition-colors"></span>
+                </button>
+            `;
+        });
+
+        html += `</div>`;
+        container.innerHTML = html;
+    }
+
+    function handleAnswer(selectedIndex) {
+        const q = questions[currentQIndex];
+
+        if (q.correct === -1) {
+            const buttons = document.querySelectorAll('.opt-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('border-purple-500/20', 'hover:border-purple-500/60');
+                btn.classList.add('border-red-500/80', 'bg-red-950/40', 'text-red-300');
+            });
+            
+            setTimeout(() => {
+                triggerTebyaSequence();
+            }, 600);
+            return;
+        }
+
+        if (selectedIndex === q.correct) {
+            currentQIndex++;
+            if (currentQIndex < questions.length) {
+                renderQuestion();
+            }
+        } else {
+            const app = document.getElementById('app');
+            app.classList.add('animate-shake');
+            setTimeout(() => app.classList.remove('animate-shake'), 400);
+            showErrorModal();
+        }
+    }
+
+    function showErrorModal() {
+        const modal = document.getElementById('error-modal');
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    }
+
+    function closeErrorModal() {
+        const modal = document.getElementById('error-modal');
+        modal.classList.add('opacity-0');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            currentQIndex = 0;
+            renderQuestion();
+        }, 300);
+    }
+
+    function triggerTebyaSequence() {
+        const overlay = document.getElementById('tebya-overlay');
+        overlay.classList.remove('hidden');
+        setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+
+        setTimeout(() => {
+            overlay.classList.add('opacity-0');
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                renderStageGreeting();
+            }, 700);
+        }, 2600);
+    }
+
+    function launchConfetti() {
+        const duration = 2.5 * 1000;
+        const end = Date.now() + duration;
+
+        (function frame() {
+            confetti({
+                particleCount: 4,
+                angle: 60,
+                spread: 55,
+                origin: { x: 0 },
+                colors: ['#a855f7', '#ec4899', '#06b6d4']
+            });
+            confetti({
+                particleCount: 4,
+                angle: 120,
+                spread: 55,
+                origin: { x: 1 },
+                colors: ['#a855f7', '#ec4899', '#06b6d4']
+            });
+
+            if (Date.now() < end) {
+                requestAnimationFrame(frame);
+            }
+        })();
+    }
+
+    /* 1. Этап Поздравления с летающими фотками */
+    function renderStageGreeting() {
+        document.getElementById('header-container').style.display = 'none';
+        const container = document.getElementById('content-container');
+        
+        launchConfetti();
+
+        const photos = [
+            'photo1.jpg', 'photo2.jpg', 'photo3.jpg', 'photo4.jpg', 'photo5.jpg',
+            'photo6.jpg', 'photo7.jpg', 'photo8.jpg', 'photo9.jpg', 'photo10.jpg'
+        ];
+
+        // Создаем макет с летающими фото
+        let html = `
+            <div class="text-center py-2 relative">
+                <div class="inline-block p-3 bg-purple-950/80 border border-purple-500/50 rounded-2xl mb-3 text-3xl animate-bounce">
+                    👑
+                </div>
+                <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 mb-1">
+                    С 16-летием, Любимая!
+                </h1>
+                <p class="text-xs text-purple-300 mb-6 font-semibold tracking-wider">Твой особенный день 🖤</p>
+
+                <!-- Летающие вокруг фото карточки -->
+                <div class="relative w-full h-64 my-4 flex items-center justify-center overflow-visible">
+                    <div class="z-20 p-4 bg-darkBg/95 border border-purple-500/40 rounded-2xl shadow-2xl backdrop-blur-md max-w-[220px]">
+                        <p class="text-xs text-gray-200 font-medium leading-relaxed">
+                            Ты самое лучшее, что случилось со мной! Смотри, как наши воспоминания летают вокруг ✨
+                        </p>
+                    </div>
+
+                    <!-- Фотки на орбитах -->
+        `;
+
+        photos.slice(0, 6).forEach((src, idx) => {
+            const animClass = idx % 2 === 0 ? 'flying-photo-1' : 'flying-photo-2';
+            const positions = [
+                'top-0 left-0', 'top-2 right-2', 'bottom-0 left-2',
+                'bottom-2 right-0', 'top-1/2 -left-4', 'top-1/2 -right-4'
+            ];
+            html += `
+                <div onclick="openPhotoModal('${src}')" class="absolute ${positions[idx]} ${animClass} w-16 h-20 rounded-xl overflow-hidden border border-purple-500/50 shadow-lg cursor-pointer glow-btn z-10" style="animation-delay: ${idx * 0.8}s">
+                    <img src="${src}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full bg-purple-900/50 flex items-center justify-center text-[10px]\'>📸</div>';">
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+
+                <button onclick="renderStageSecretMenu()" class="w-full mt-6 py-3.5 bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 rounded-xl font-bold text-white text-sm glow-btn shadow-xl flex items-center justify-center gap-2">
+                    <span>Перейти к секретам</span>
+                    <span>🔒</span>
+                </button>
+            </div>
+        `;
+
+        container.innerHTML = html;
+    }
+
+    /* 2. Этап Секретного Меню */
+    function renderStageSecretMenu() {
+        const container = document.getElementById('content-container');
+        
+        container.innerHTML = `
+            <div class="py-2 text-center">
+                <h2 class="text-lg font-bold text-pink-400 mb-1">Секретная зона 🔮</h2>
+                <p class="text-xs text-gray-400 mb-6">Выбери секрет или нажми «Продолжить»</p>
+
+                <div class="space-y-4 mb-6">
+                    <!-- Кнопка 1: Послание под замком -->
+                    <div onclick="openSecretModal()" class="p-4 bg-darkBg/80 border border-purple-500/30 rounded-2xl text-left cursor-pointer glow-btn flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">🔐</span>
+                            <div>
+                                <h4 class="text-xs font-bold text-purple-300">Послание под замком</h4>
+                                <p class="text-[10px] text-gray-400">Введи секретный пароль</p>
+                            </div>
+                        </div>
+                        <span class="text-xs text-purple-400">Открыть ➔</span>
+                    </div>
+
+                    <!-- Кнопка 2: Генератор комплиментов -->
+                    <div onclick="generateCompliment()" class="p-4 bg-darkBg/80 border border-pink-500/30 rounded-2xl text-left cursor-pointer glow-btn">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">✨</span>
+                                <div>
+                                    <h4 class="text-xs font-bold text-pink-300">16 причин, почему ты лучшая</h4>
+                                    <p class="text-[10px] text-gray-400">Нажимай чтобы узнать причину</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="compliment-box" class="hidden mt-2 p-2.5 bg-pink-950/30 border border-pink-500/20 rounded-xl text-center text-xs text-pink-200 font-semibold"></div>
+                    </div>
+                </div>
+
+                <!-- Кнопка Продолжить к Финалу -->
+                <button onclick="renderStageFinal()" class="w-full py-3.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl font-bold text-white text-sm glow-btn shadow-xl flex items-center justify-center gap-2">
+                    <span>Продолжить (Финальное признание)</span>
+                    <span>❤️</span>
+                </button>
+            </div>
+        `;
+    }
+
+    function generateCompliment() {
+        const box = document.getElementById('compliment-box');
+        box.classList.remove('hidden');
+        const random = compliments[Math.floor(Math.random() * compliments.length)];
+        box.innerText = random;
+    }
+
+    function openSecretModal() {
+        const modal = document.getElementById('secret-modal');
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    }
+
+    function closeSecretModal() {
+        const modal = document.getElementById('secret-modal');
+        modal.classList.add('opacity-0');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    function checkSecretCode() {
+        const val = document.getElementById('secret-code-input').value.trim();
+        if (val === '16' || val === '1208' || val === '12.08') {
+            document.getElementById('secret-letter-content').classList.remove('hidden');
+        } else {
+            alert('Неверный код! Подсказка: 16 или 1208 😉');
+        }
+    }
+
+    /* 3. Финальное Признание */
+    function renderStageFinal() {
+        const container = document.getElementById('content-container');
+        launchConfetti();
+
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <div class="text-5xl mb-4 animate-pulse-glow">🖤</div>
+                <h2 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 mb-3">
+                    Моя Любимая...
+                </h2>
+                
+                <div class="bg-darkBg/90 border border-purple-500/40 rounded-2xl p-5 text-left mb-6 shadow-2xl relative overflow-hidden">
+                    <p class="text-xs text-gray-200 leading-relaxed font-sans mb-3">
+                        Спасибо за то, что прошла этот маленький интерактив! Каждая деталь здесь создана, чтобы лишний раз напомнить тебе, как ты мне дорога.
+                    </p>
+                    <p class="text-xs text-purple-300 leading-relaxed font-sans font-semibold">
+                        С днем рождения тебя, мой самый любимый человек! Пусть твои 16 лет будут самыми незабываемыми! ✨
+                    </p>
+                </div>
+
+                <button onclick="launchConfetti()" class="w-full py-3.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl font-bold text-white text-xs glow-btn shadow-lg mb-3">
+                    Запустить праздничный салют 🎉
+                </button>
+
+                <div class="text-[10px] text-gray-500 tracking-wider">
+                    Создано специально для тебя ✦
+                </div>
+            </div>
+        `;
+    }
+
+    function openPhotoModal(src) {
+        const modal = document.getElementById('photo-modal');
+        const img = document.getElementById('photo-modal-img');
+        img.src = src;
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    }
+
+    function closePhotoModal() {
+        const modal = document.getElementById('photo-modal');
+        modal.classList.add('opacity-0');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    window.onload = function() {
+        renderQuestion();
+    }
+</script>
+</body>
+</html>
